@@ -1,0 +1,20 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+.python-version
+uv.lock
+
+# app specific files
+*.mp4
+*.mkv
+*.webm
+target/
+*.txt
+.DS_Store

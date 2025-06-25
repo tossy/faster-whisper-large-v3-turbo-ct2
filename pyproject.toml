@@ -1,0 +1,10 @@
+[project]
+name = "faster-whisper-large-v3-turbo-ct2"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "faster-whisper>=1.1.1",
+    "tqdm>=4.67.1",
+]

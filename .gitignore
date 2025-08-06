@@ -16,5 +16,8 @@ uv.lock
 *.mkv
 *.webm
 target/
+done/
 *.txt
 .DS_Store
+*.vtt
+*.mov

@@ -19,7 +19,8 @@
 - ツールの実行: `uv run [tool_name.py]`
 
 ## 機能仕様
-- 単一ファイル処理
+- 単一ファイル処理 (mlx-whisper.py, main.py)
+- ディレクトリ一括処理 (main.py のみ)
 - 対応フォーマット: WAV, MP3, M4A, FLAC, OGG, AAC, WMA, MP4, WebM, MKV, AVI, MOV
 - 複数出力フォーマット対応: txt, json, srt, vtt, tsv
 - 単語レベルタイムスタンプ対応
@@ -42,8 +43,10 @@
   - `--language`: 言語指定 (例: 'en', 'ja')
 
 ## コマンドライン仕様 (main.py - 代替/バッチ処理用)
-- 基本実行: `uv run main.py -i <input> [-o <output>] [--segmented]`
-- ディレクトリ一括処理対応
+- 単一ファイル: `uv run main.py -i <input> [-o <output>] [--segmented]`
+- ディレクトリ一括処理: `uv run main.py -i <directory> [--segmented]`
+- `-o` オプションは単一ファイルモードのみ有効
+- ディレクトリモードでは入力ファイル名から出力ファイル名を自動生成
 
 ## 出力ファイル仕様
 - テキスト出力: UTF-8エンコーディング、.txt拡張子

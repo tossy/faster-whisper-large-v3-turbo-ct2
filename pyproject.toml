@@ -8,4 +8,5 @@ dependencies = [
     "faster-whisper>=1.1.1",
     "mlx-whisper>=0.4.2",
     "tqdm>=4.67.1",
+    "yt-dlp>=2024.0.0",
 ]

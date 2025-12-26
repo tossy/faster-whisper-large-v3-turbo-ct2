@@ -46,4 +46,16 @@ def format_timestamp(seconds):
 | 単一ファイル処理 | mlx-whisper.py |
 | バッチ/ディレクトリ処理 | main.py (faster-whisper) |
 | 最速処理 (M3) | mlx-whisper.py |
-| 言語検出確信度が必要 | main.py (faster-whisper)
+| 言語検出確信度が必要 | main.py (faster-whisper) |
+
+## main.py バッチ処理実装パターン
+```python
+# ディレクトリ内の音声ファイルを検出
+audio_exts = {'.wav', '.mp3', '.m4a', '.flac', '.ogg', '.aac', '.wma', '.mp4', '.webm', '.mkv', '.avi', '.mov'}
+files = [f for f in os.listdir(input_path) if os.path.splitext(f)[1].lower() in audio_exts]
+
+# 一括処理（モデルは一度だけロード）
+model = WhisperModel("deepdml/faster-whisper-large-v3-turbo-ct2")
+for filename in files:
+    transcribe_file(input_file, output_txt, model, segmented)
+```

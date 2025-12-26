@@ -15,8 +15,7 @@ uv.lock
 *.mp4
 *.mkv
 *.webm
-target/
-done/
+downloads/
 *.txt
 .DS_Store
 *.vtt

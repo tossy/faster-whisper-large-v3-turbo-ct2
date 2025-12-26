@@ -21,3 +21,4 @@ done/
 .DS_Store
 *.vtt
 *.mov
+*.code-workspace

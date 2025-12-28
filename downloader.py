@@ -12,7 +12,7 @@ from config import YOUTUBE_URLS, DOWNLOAD_DIR, AUDIO_ONLY
 def get_ydl_opts(output_dir: str, audio_only: bool) -> dict:
     """Get yt-dlp options based on configuration."""
     opts = {
-        "outtmpl": os.path.join(output_dir, "%(title)s.%(ext)s"),
+        "outtmpl": os.path.join(output_dir, "%(title)s [%(id)s].%(ext)s"),
         "ignoreerrors": True,  # Continue on download errors
         "no_warnings": False,
         "quiet": False,

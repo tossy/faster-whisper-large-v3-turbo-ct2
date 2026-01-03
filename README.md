@@ -1,15 +1,17 @@
 # Whisper Audio Transcription Tool
 
-A Python-based audio transcription tool optimized for Apple Silicon (M3) using MLX-Whisper, with faster-whisper as an alternative for batch processing.
+A Python-based audio transcription tool optimized for Apple Silicon (M3) using MLX-Whisper, with faster-whisper as an alternative for batch processing. Includes a complete YouTube download and transcription pipeline.
 
 ## Features
 
+- **YouTube Download Pipeline**: Download videos/playlists from YouTube and automatically transcribe
 - **Apple Silicon Optimized**: MLX-Whisper leverages M3 GPU/Neural Engine for fast inference
 - **Multiple Output Formats**: txt, json, srt, vtt, tsv
 - **Word-Level Timestamps**: Optional detailed timing for each word
-- **Batch Processing**: Process entire directories (via faster-whisper)
+- **Batch Processing**: Process entire directories
 - **Language Detection**: Automatic detection or manual specification
 - **Multi-Format Support**: Various audio and video formats
+- **Automatic Cleanup**: Optionally delete media files after transcription
 
 ## Supported Formats
 
@@ -30,6 +32,50 @@ A Python-based audio transcription tool optimized for Apple Silicon (M3) using M
    ```
 
 ## Usage
+
+### Pipeline (YouTube Download & Transcription)
+
+The pipeline automatically downloads YouTube videos and transcribes them. Configure settings in `config.py`.
+
+#### Configuration (config.py)
+
+```python
+# YouTube URLs (single videos or playlists)
+YOUTUBE_URLS = [
+    "https://www.youtube.com/playlist?list=PLxxxxxxxx",
+    "https://www.youtube.com/watch?v=VIDEO_ID",
+]
+
+# Download directory
+DOWNLOAD_DIR = "./downloads"
+
+# Audio only mode (smaller files, faster download)
+AUDIO_ONLY = False
+
+# Output format: "txt", "vtt", "srt", "json", "tsv"
+OUTPUT_FORMAT = "vtt"
+
+# Language (None for auto-detect, or "en", "ja", etc.)
+LANGUAGE = None
+
+# Delete media files after transcription
+DELETE_AFTER_TRANSCRIPTION = False
+```
+
+#### Run Full Pipeline
+```bash
+uv run pipeline.py
+```
+
+#### Download Only (Skip Transcription)
+```bash
+uv run pipeline.py --download-only
+```
+
+#### Transcribe Only (Skip Download)
+```bash
+uv run pipeline.py --transcribe-only
+```
 
 ### MLX-Whisper (Recommended for Apple Silicon)
 
@@ -81,6 +127,15 @@ uv run main.py -i audio.mp3 --segmented
 ```
 
 ## Command Line Options
+
+### pipeline.py (YouTube Download & Transcription)
+
+| Option | Description |
+|--------|-------------|
+| `--download-only` | Only download videos, skip transcription |
+| `--transcribe-only` | Only transcribe existing files in download directory |
+
+Settings are configured in `config.py` (see Configuration section above).
 
 ### mlx-whisper.py (Main)
 
@@ -151,6 +206,7 @@ start	end	text
 
 ## Dependencies
 
+- **yt-dlp**: YouTube video downloader (pipeline)
 - **mlx-whisper**: Apple Silicon optimized Whisper (main)
 - **faster-whisper**: CPU-based Whisper implementation (batch processing)
 - **tqdm**: Progress bar visualization
@@ -160,6 +216,7 @@ start	end	text
 
 | Script | Model | Optimization |
 |--------|-------|--------------|
+| pipeline.py | Auto-selects based on platform | Apple Silicon or CPU |
 | mlx-whisper.py | mlx-community/whisper-large-v3-turbo | Apple Silicon (MLX) |
 | main.py | deepdml/faster-whisper-large-v3-turbo-ct2 | CTranslate2 (CPU) |
 
@@ -167,6 +224,8 @@ start	end	text
 
 | Use Case | Recommended Script |
 |----------|-------------------|
+| YouTube video/playlist transcription | pipeline.py |
+| Automated download + transcribe workflow | pipeline.py |
 | Single file, fastest speed (M3) | mlx-whisper.py |
 | Multiple output formats needed | mlx-whisper.py |
 | Word-level timestamps | mlx-whisper.py |

@@ -16,6 +16,9 @@ def get_ydl_opts(output_dir: str, audio_only: bool) -> dict:
         "ignoreerrors": True,  # Continue on download errors
         "no_warnings": False,
         "quiet": False,
+        # Enable remote components for JavaScript challenge solving
+        # This fixes the issue where the first video in a playlist gets audio-only
+        "remote_components": {"ejs:github"},
     }
 
     if audio_only:
@@ -62,14 +65,16 @@ def download_videos(urls: list = None, output_dir: str = None, audio_only: bool 
     # Track downloaded files
     downloaded_files = []
 
-    def progress_hook(d):
+    def postprocessor_hook(d):
+        """Called after post-processing (including merge) is complete."""
         if d["status"] == "finished":
-            filepath = d.get("filename")
-            if filepath:
+            # Get the final filepath after all post-processing
+            filepath = d.get("info_dict", {}).get("filepath")
+            if filepath and filepath not in downloaded_files:
                 downloaded_files.append(filepath)
 
     opts = get_ydl_opts(output_dir, audio_only)
-    opts["progress_hooks"] = [progress_hook]
+    opts["postprocessor_hooks"] = [postprocessor_hook]
 
     print(f"Download directory: {os.path.abspath(output_dir)}")
     print(f"Audio only: {audio_only}")

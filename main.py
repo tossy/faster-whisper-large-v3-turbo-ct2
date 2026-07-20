@@ -3,17 +3,12 @@ import os
 from faster_whisper import WhisperModel
 from tqdm import tqdm
 
-def format_timestamp(seconds: float) -> str:
-    hours = int(seconds // 3600)
-    minutes = int((seconds % 3600) // 60)
-    secs = int(seconds % 60)
-    millis = int((seconds - int(seconds)) * 1000)
-    return f"{hours:02}:{minutes:02}:{secs:02}.{millis:03}"
+from common import MEDIA_EXTENSIONS, format_timestamp
 
 def transcribe_file(input_file, output_file, model, segmented):
     print(f"Transcribing {input_file}...")
     print(f"Output will be saved to {output_file}\n")
-    segments, info = model.transcribe(input_file)
+    segments, info = model.transcribe(input_file, vad_filter=True)
     transcript_text = []
     vtt_segments = []
     with tqdm(desc=f"Processing segments ({os.path.basename(input_file)})", unit="segment") as pbar:
@@ -52,10 +47,8 @@ def main():
 
     model = WhisperModel("deepdml/faster-whisper-large-v3-turbo-ct2")
 
-    audio_exts = {'.wav', '.mp3', '.m4a', '.flac', '.ogg', '.aac', '.wma', '.mp4', '.webm', '.mkv', '.avi', '.mov'}
-
     if os.path.isdir(input_path):
-        files = [f for f in os.listdir(input_path) if os.path.splitext(f)[1].lower() in audio_exts]
+        files = [f for f in os.listdir(input_path) if os.path.splitext(f)[1].lower() in MEDIA_EXTENSIONS]
         if not files:
             print("No audio files found in the specified directory.")
             return

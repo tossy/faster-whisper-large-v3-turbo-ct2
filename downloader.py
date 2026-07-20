@@ -5,8 +5,19 @@ Supports single videos and playlists.
 """
 
 import os
+import sys
 import yt_dlp
-from config import YOUTUBE_URLS, DOWNLOAD_DIR, AUDIO_ONLY
+from common import MEDIA_EXTENSIONS
+
+try:
+    from config import YOUTUBE_URLS, DOWNLOAD_DIR, AUDIO_ONLY
+except ImportError:
+    print(
+        "config.py not found. Copy the template first:\n"
+        "    cp config.example.py config.py",
+        file=sys.stderr,
+    )
+    sys.exit(1)
 
 
 def get_ydl_opts(output_dir: str, audio_only: bool) -> dict:
@@ -16,6 +27,8 @@ def get_ydl_opts(output_dir: str, audio_only: bool) -> dict:
         "ignoreerrors": True,  # Continue on download errors
         "no_warnings": False,
         "quiet": False,
+        # Skip videos already downloaded in previous runs (IDs recorded here)
+        "download_archive": os.path.join(output_dir, ".download-archive.txt"),
         # Enable remote components for JavaScript challenge solving
         # This fixes the issue where the first video in a playlist gets audio-only
         "remote_components": {"ejs:github"},
@@ -110,18 +123,11 @@ def get_downloaded_files(output_dir: str = None) -> list:
     if not os.path.isdir(output_dir):
         return []
 
-    media_extensions = {
-        ".mp4", ".mkv", ".webm", ".avi", ".mov",  # Video
-        ".mp3", ".m4a", ".wav", ".flac", ".ogg", ".aac", ".wma"  # Audio
-    }
-
-    files = []
-    for filename in os.listdir(output_dir):
-        ext = os.path.splitext(filename)[1].lower()
-        if ext in media_extensions:
-            files.append(os.path.join(output_dir, filename))
-
-    return sorted(files)
+    return sorted(
+        os.path.join(output_dir, filename)
+        for filename in os.listdir(output_dir)
+        if os.path.splitext(filename)[1].lower() in MEDIA_EXTENSIONS
+    )
 
 
 if __name__ == "__main__":

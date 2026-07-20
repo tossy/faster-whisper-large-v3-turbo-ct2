@@ -31,11 +31,17 @@ A Python-based audio transcription tool optimized for Apple Silicon (M3) using M
    uv sync
    ```
 
+3. **Create your local config** (gitignored, keeps your URLs private):
+   ```bash
+   cp config.example.py config.py
+   ```
+   Then edit `config.py` with your YouTube URLs and settings.
+
 ## Usage
 
 ### Pipeline (YouTube Download & Transcription)
 
-The pipeline automatically downloads YouTube videos and transcribes them. Configure settings in `config.py`.
+The pipeline automatically downloads YouTube videos and transcribes them. Configure settings in `config.py` (created from `config.example.py`, kept out of git).
 
 #### Configuration (config.py)
 
@@ -64,7 +70,11 @@ DELETE_AFTER_TRANSCRIPTION = False
 
 #### Run Full Pipeline
 ```bash
+# Use URLs and settings from config.py
 uv run pipeline.py
+
+# Or override on the command line (no config.py edit needed)
+uv run pipeline.py "https://www.youtube.com/watch?v=VIDEO_ID" -d ./MyTalk -f srt
 ```
 
 #### Download Only (Skip Transcription)
@@ -77,36 +87,44 @@ uv run pipeline.py --download-only
 uv run pipeline.py --transcribe-only
 ```
 
+#### Re-transcribe Existing Files
+Already-transcribed files are skipped by default (a transcript with the target
+format already exists next to the media file). Downloads are also skipped for
+videos recorded in `.download-archive.txt`. To redo transcription:
+```bash
+uv run pipeline.py --transcribe-only --force
+```
+
 ### MLX-Whisper (Recommended for Apple Silicon)
 
 #### Basic Transcription
 ```bash
-uv run mlx-whisper.py -i audio.mp3
+uv run mlx_whisper_cli.py -i audio.mp3
 ```
 
 #### Specify Output Format
 ```bash
 # VTT subtitles
-uv run mlx-whisper.py -i audio.mp3 -f vtt
+uv run mlx_whisper_cli.py -i audio.mp3 -f vtt
 
 # SRT subtitles
-uv run mlx-whisper.py -i audio.mp3 -f srt
+uv run mlx_whisper_cli.py -i audio.mp3 -f srt
 
 # JSON with full metadata
-uv run mlx-whisper.py -i audio.mp3 -f json
+uv run mlx_whisper_cli.py -i audio.mp3 -f json
 
 # TSV (tab-separated with timestamps)
-uv run mlx-whisper.py -i audio.mp3 -f tsv
+uv run mlx_whisper_cli.py -i audio.mp3 -f tsv
 ```
 
 #### With Language and Word Timestamps
 ```bash
-uv run mlx-whisper.py -i audio.mp3 -f vtt --language ja --word-timestamps
+uv run mlx_whisper_cli.py -i audio.mp3 -f vtt --language ja --word-timestamps
 ```
 
 #### Custom Output Path
 ```bash
-uv run mlx-whisper.py -i audio.mp3 -o transcript.txt
+uv run mlx_whisper_cli.py -i audio.mp3 -o transcript.txt
 ```
 
 ### Faster-Whisper (Batch Processing)
@@ -130,14 +148,21 @@ uv run main.py -i audio.mp3 --segmented
 
 ### pipeline.py (YouTube Download & Transcription)
 
-| Option | Description |
-|--------|-------------|
-| `--download-only` | Only download videos, skip transcription |
-| `--transcribe-only` | Only transcribe existing files in download directory |
+| Option | Short | Description |
+|--------|-------|-------------|
+| `urls` (positional) | | YouTube URLs (videos or playlists), overrides `YOUTUBE_URLS` |
+| `--dir` | `-d` | Download/transcript directory, overrides `DOWNLOAD_DIR` |
+| `--format` | `-f` | Transcript format (txt, json, srt, vtt, tsv), overrides `OUTPUT_FORMAT` |
+| `--language` | `-l` | Language (e.g. 'en', 'ja'), overrides `LANGUAGE` |
+| `--audio-only` / `--video` | | Override `AUDIO_ONLY` |
+| `--download-only` | | Only download videos, skip transcription |
+| `--transcribe-only` | | Only transcribe existing files in download directory |
+| `--force` | | Re-transcribe files that already have a transcript |
 
-Settings are configured in `config.py` (see Configuration section above).
+Defaults come from `config.py` (see Configuration section above). Exit code is
+non-zero if any transcription fails.
 
-### mlx-whisper.py (Main)
+### mlx_whisper_cli.py (Main)
 
 | Option | Short | Description | Default |
 |--------|-------|-------------|---------|
@@ -147,6 +172,7 @@ Settings are configured in `config.py` (see Configuration section above).
 | `--model` | | Whisper model to use | mlx-community/whisper-large-v3-turbo |
 | `--word-timestamps` | | Include word-level timestamps | Off |
 | `--language` | | Force specific language (e.g., 'en', 'ja') | Auto-detect |
+| `--force` | | Re-transcribe even if output exists (directory mode) | Off |
 
 ### main.py (Batch Processing)
 
@@ -217,7 +243,7 @@ start	end	text
 | Script | Model | Optimization |
 |--------|-------|--------------|
 | pipeline.py | Auto-selects based on platform | Apple Silicon or CPU |
-| mlx-whisper.py | mlx-community/whisper-large-v3-turbo | Apple Silicon (MLX) |
+| mlx_whisper_cli.py | mlx-community/whisper-large-v3-turbo | Apple Silicon (MLX) |
 | main.py | deepdml/faster-whisper-large-v3-turbo-ct2 | CTranslate2 (CPU) |
 
 ## When to Use Which Script
@@ -226,9 +252,9 @@ start	end	text
 |----------|-------------------|
 | YouTube video/playlist transcription | pipeline.py |
 | Automated download + transcribe workflow | pipeline.py |
-| Single file, fastest speed (M3) | mlx-whisper.py |
-| Multiple output formats needed | mlx-whisper.py |
-| Word-level timestamps | mlx-whisper.py |
+| Single file, fastest speed (M3) | mlx_whisper_cli.py |
+| Multiple output formats needed | mlx_whisper_cli.py |
+| Word-level timestamps | mlx_whisper_cli.py |
 | Batch/directory processing | main.py |
 | Language detection confidence | main.py |
 

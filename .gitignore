@@ -11,13 +11,28 @@ wheels/
 .python-version
 uv.lock
 
+# local configuration (copy config.example.py to config.py)
+config.py
+
 # app specific files
 *.mp4
 *.mkv
 *.webm
+*.mov
+*.avi
+*.m4a
+*.mp3
+*.wav
+*.flac
+*.ogg
+*.aac
+*.wma
+*.qta
 downloads/
 *.txt
-.DS_Store
 *.vtt
-*.mov
+*.srt
+*.tsv
+.DS_Store
 *.code-workspace
+.download-archive.txt

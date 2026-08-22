@@ -26,6 +26,7 @@ except ImportError:
     )
     sys.exit(1)
 
+import registry
 from common import MEDIA_EXTENSIONS, OUTPUT_FORMATS, find_media_files, save_output
 from downloader import download_videos, get_downloaded_files
 
@@ -147,17 +148,39 @@ def transcribe_with_faster_whisper(input_dir: str, output_format: str, language:
     return output_files, failed
 
 
+def has_transcript(media_path: str) -> bool:
+    """True if any transcript format exists alongside a media file."""
+    base_name = os.path.splitext(media_path)[0]
+    return any(os.path.exists(f"{base_name}.{fmt}") for fmt in OUTPUT_FORMATS)
+
+
 def cleanup_media_files(directory: str) -> int:
-    """Delete media files after successful transcription."""
+    """
+    Delete media files that have a transcript.
+
+    Files whose transcription failed are kept: deleting them would leave the
+    video with neither media nor transcript, and the registry would have to
+    re-download it on the next run.
+    """
     deleted = 0
+    kept = 0
     for filename in find_media_files(directory):
         filepath = os.path.join(directory, filename)
+
+        if not has_transcript(filepath):
+            print(f"Kept (no transcript): {filename}")
+            kept += 1
+            continue
+
         try:
             os.remove(filepath)
             print(f"Deleted: {filename}")
             deleted += 1
         except Exception as e:
             print(f"Failed to delete {filename}: {e}", file=sys.stderr)
+
+    if kept:
+        print(f"Kept {kept} media file(s) without a transcript")
 
     return deleted
 
@@ -171,6 +194,9 @@ def run_pipeline(
     download_only: bool = False,
     transcribe_only: bool = False,
     force: bool = False,
+    cookies_from_browser: str = None,
+    redownload: list = None,
+    use_registry: bool = True,
 ) -> int:
     """
     Run the full pipeline: download -> transcribe -> cleanup.
@@ -186,6 +212,9 @@ def run_pipeline(
         download_only: Only download, skip transcription
         transcribe_only: Only transcribe existing files, skip download
         force: Re-transcribe files that already have a transcript
+        cookies_from_browser: Browser to pull YouTube cookies from (e.g. 'brave')
+        redownload: Video IDs to drop from the registry so they are fetched again
+        use_registry: Consult the project-wide registry to skip finished videos
 
     Returns:
         Number of failed transcriptions (0 on full success)
@@ -195,6 +224,8 @@ def run_pipeline(
     output_format = output_format if output_format is not None else config.OUTPUT_FORMAT
     language = language if language is not None else config.LANGUAGE
     audio_only = audio_only if audio_only is not None else config.AUDIO_ONLY
+    if cookies_from_browser is None:
+        cookies_from_browser = getattr(config, "COOKIES_FROM_BROWSER", None)
 
     print("=" * 60)
     print("YouTube Download & Transcription Pipeline")
@@ -214,14 +245,27 @@ def run_pipeline(
     if not transcribe_only:
         print("\n[Phase 1] Downloading videos...")
         print("-" * 50)
-        downloaded = download_videos(urls, download_dir, audio_only)
-        if not downloaded:
+
+        # Rebuild the project-wide record of finished videos first, so a run
+        # pointed at a new --dir still skips what other directories hold.
+        archive = registry.prepare_archive(redownload) if use_registry else None
+        if not use_registry:
+            print("Registry disabled (--no-registry): duplicates are possible")
+
+        downloaded = download_videos(urls, download_dir, audio_only,
+                                     cookies_from_browser, archive)
+        if downloaded:
+            if use_registry:
+                registry.record_downloads(downloaded)
+        else:
             print("No videos downloaded.")
     else:
         print("\n[Phase 1] Skipped (--transcribe-only)")
 
     if download_only:
         print("\n[Phase 2] Skipped (--download-only)")
+        if use_registry:
+            registry.write_archive(registry.rebuild(quiet=True))
         print("\nPipeline complete (download only).")
         return 0
 
@@ -233,6 +277,8 @@ def run_pipeline(
     files = get_downloaded_files(download_dir)
     if not files:
         print(f"No media files found in '{download_dir}'")
+        if use_registry:
+            registry.write_archive(registry.rebuild(quiet=True))
         print("\nPipeline complete (no files to transcribe).")
         return 0
 
@@ -249,6 +295,13 @@ def run_pipeline(
         print(f"Deleted {deleted} media file(s)")
     else:
         print("\n[Phase 3] Cleanup skipped (DELETE_AFTER_TRANSCRIPTION=False)")
+
+    # Record the run: new transcripts and any media the cleanup kept are
+    # picked straight off disk, so the registry cannot drift from reality.
+    if use_registry:
+        print("\n[Phase 4] Updating registry...")
+        print("-" * 50)
+        registry.write_archive(registry.rebuild())
 
     # Summary
     print("\n" + "=" * 60)
@@ -319,6 +372,27 @@ def main():
         help="Re-transcribe files that already have a transcript"
     )
 
+    parser.add_argument(
+        "--cookies-from-browser",
+        metavar="BROWSER",
+        help="Browser to read YouTube cookies from, e.g. 'brave'. "
+             "Overrides COOKIES_FROM_BROWSER in config.py"
+    )
+
+    parser.add_argument(
+        "--redownload",
+        action="append",
+        metavar="VIDEO_ID",
+        help="Drop a video ID from the registry so it is downloaded again. "
+             "Repeatable"
+    )
+
+    parser.add_argument(
+        "--no-registry",
+        action="store_true",
+        help="Ignore the project-wide registry (may re-download finished videos)"
+    )
+
     args = parser.parse_args()
 
     if args.download_only and args.transcribe_only:
@@ -340,6 +414,9 @@ def main():
         download_only=args.download_only,
         transcribe_only=args.transcribe_only,
         force=args.force,
+        cookies_from_browser=args.cookies_from_browser,
+        redownload=args.redownload,
+        use_registry=not args.no_registry,
     )
 
     if failed:

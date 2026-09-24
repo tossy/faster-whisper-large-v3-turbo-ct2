@@ -55,6 +55,11 @@ YOUTUBE_URLS = [
 # Download directory
 DOWNLOAD_DIR = "./downloads"
 
+# Browser to read YouTube cookies from ("brave", "chrome", "firefox", ...).
+# Required as of 2026: unauthenticated downloads fail with HTTP 403.
+# None = no cookies.
+COOKIES_FROM_BROWSER = None
+
 # Audio only mode (smaller files, faster download)
 AUDIO_ONLY = False
 
@@ -89,10 +94,44 @@ uv run pipeline.py --transcribe-only
 
 #### Re-transcribe Existing Files
 Already-transcribed files are skipped by default (a transcript with the target
-format already exists next to the media file). Downloads are also skipped for
-videos recorded in `.download-archive.txt`. To redo transcription:
+format already exists next to the media file). To redo transcription:
 ```bash
 uv run pipeline.py --transcribe-only --force
+```
+
+### Avoiding Duplicate Downloads
+
+A project-wide registry at `.registry.json` records every video that has been
+downloaded or transcribed, keyed by YouTube video ID. Before each run the
+pipeline rebuilds it and generates `.download-archive.txt` at the project root,
+which is what yt-dlp reads to skip finished videos.
+
+The registry is **project-wide, not per-directory**. Running the same playlist
+into a new `--dir` still skips everything already downloaded elsewhere. (The
+archive used to live inside each output directory, so a new `--dir` re-fetched
+the whole playlist.)
+
+It is also **rebuildable**. Downloads are named `<title> [<video id>].<ext>`, so
+every media file and every transcript carries its own ID. Delete
+`.registry.json` and the next run reconstructs it by scanning the project.
+
+A video counts as done when a transcript exists, when its media is still on
+disk, or when it appears in an old per-directory archive. A video whose
+transcription failed is downloaded again, because cleanup keeps media that has
+no transcript.
+
+```bash
+# Inspect
+uv run registry.py stats            # counts
+uv run registry.py list             # every tracked video
+uv run registry.py list --pending   # videos still needing a download
+
+# Rescan the project and regenerate the archive
+uv run registry.py rebuild
+
+# Force one video back into the download set
+uv run registry.py forget VIDEO_ID
+uv run pipeline.py --redownload VIDEO_ID
 ```
 
 ### MLX-Whisper (Recommended for Apple Silicon)
@@ -158,6 +197,9 @@ uv run main.py -i audio.mp3 --segmented
 | `--download-only` | | Only download videos, skip transcription |
 | `--transcribe-only` | | Only transcribe existing files in download directory |
 | `--force` | | Re-transcribe files that already have a transcript |
+| `--cookies-from-browser` | | Browser to read YouTube cookies from, overrides `COOKIES_FROM_BROWSER` |
+| `--redownload` | | Video ID to drop from the registry so it downloads again (repeatable) |
+| `--no-registry` | | Ignore the registry (may re-download finished videos) |
 
 Defaults come from `config.py` (see Configuration section above). Exit code is
 non-zero if any transcription fails.

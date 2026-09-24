@@ -37,6 +37,14 @@ for _url in YOUTUBE_URLS:
 # Directory to save downloaded videos
 DOWNLOAD_DIR = "./downloads"
 
+# Browser to read YouTube cookies from (yt-dlp --cookies-from-browser).
+# Required as of 2026: YouTube gates streaming formats behind PO tokens, so
+# unauthenticated downloads fail with "HTTP Error 403: Forbidden".
+# Options: "brave", "chrome", "chromium", "edge", "vivaldi", "opera", "firefox",
+# "safari" (Safari's cookie file is SIP-protected on macOS and usually fails).
+# Set to None to download without cookies.
+COOKIES_FROM_BROWSER = None
+
 # Download full video or audio only
 # True = audio only (smaller files, faster download)
 # False = full video file (default)

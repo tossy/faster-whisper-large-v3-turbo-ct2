@@ -36,3 +36,6 @@ downloads/
 .DS_Store
 *.code-workspace
 .download-archive.txt
+
+# project-wide video registry (rebuildable from filenames)
+.registry.json
